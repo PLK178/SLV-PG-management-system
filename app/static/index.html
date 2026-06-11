@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillCraft | Personal Skill Tracker</title>
+    <meta name="description" content="A premium and minimal tool to manage, track, and master your personal and professional skills.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="logo-section">
+                <h1>SkillCraft</h1>
+                <p>Track, refine, and master your skill set</p>
+            </div>
+            <div class="header-stats" style="display: flex; gap: 1.5rem;">
+                <div style="text-align: right;">
+                    <span id="total-skills" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">0</span>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Total Skills</p>
+                </div>
+                <div style="text-align: right; border-left: 1px solid var(--border-color); padding-left: 1.5rem;">
+                    <span id="mastered-skills" style="font-size: 1.25rem; font-weight: 700; color: var(--success);">0</span>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Mastered</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="main-content">
+            <!-- Left Panel: Skill listing and search -->
+            <section aria-label="Skills Registry">
+                <div class="filter-bar">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-right: 0.5rem;">Category:</span>
+                    <button class="filter-chip active" data-category="All" id="filter-all">All</button>
+                    <button class="filter-chip" data-category="Programming" id="filter-prog">Programming</button>
+                    <button class="filter-chip" data-category="Design" id="filter-design">Design</button>
+                    <button class="filter-chip" data-category="Languages" id="filter-lang">Languages</button>
+                    <button class="filter-chip" data-category="Soft Skills" id="filter-soft">Soft Skills</button>
+                    <button class="filter-chip" data-category="Other" id="filter-other">Other</button>
+                </div>
+
+                <div class="skills-grid" id="skills-grid">
+                    <!-- Skills will be rendered dynamically here -->
+                    <div class="empty-state" id="empty-state">
+                        <i data-lucide="award" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                        <h3>No skills registered yet</h3>
+                        <p>Use the form on the right to start craft-tracking your first skill.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Add/Edit Form -->
+            <aside>
+                <div class="panel-card">
+                    <h2 class="panel-title" id="form-title">
+                        <i data-lucide="plus-circle" style="color: var(--primary);"></i>
+                        Add New Skill
+                    </h2>
+                    <form id="skill-form">
+                        <input type="hidden" id="skill-id">
+                        
+                        <div class="form-group">
+                            <label for="title">Skill Title</label>
+                            <input type="text" id="title" class="form-control" placeholder="e.g. Python, UI Design, Public Speaking" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select id="category" class="form-control" required>
+                                <option value="Programming">Programming</option>
+                                <option value="Design">Design</option>
+                                <option value="Languages">Languages</option>
+                                <option value="Soft Skills">Soft Skills</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="level">Expertise Level</label>
+                            <select id="level" class="form-control" required>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="status">Learning Status</label>
+                            <select id="status" class="form-control" required>
+                                <option value="Not Started">Not Started</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Mastered">Mastered</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="progress">Progress Completion</label>
+                            <div class="range-group">
+                                <input type="range" id="progress" class="form-control" min="0" max="100" value="0" style="padding: 0; background: transparent; accent-color: var(--primary);">
+                                <span class="range-val" id="progress-val">0%</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Notes & Resources</label>
+                            <textarea id="description" class="form-control" placeholder="Books, courses, goals or specific areas of interest..."></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                            <button type="submit" class="btn" style="flex-grow: 1;" id="submit-btn">
+                                <i data-lucide="save"></i>
+                                Save Skill
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Notifications toast system -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
