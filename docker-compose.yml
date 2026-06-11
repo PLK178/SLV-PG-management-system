@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: skill_dev_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: skill_user
+      POSTGRES_PASSWORD: skill_password
+      POSTGRES_DB: skill_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
