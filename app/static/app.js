@@ -1,4 +1,5 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
+    console.log("SkillCraft app.js: initializing event listeners...");
     // API base URL
     const API_BASE = '/api';
 
@@ -6,14 +7,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let skills = [];
     let currentCategoryFilter = 'All';
     let editMode = false;
+    let authMode = 'login'; // 'login' or 'signup'
+    let token = localStorage.getItem('token') || null;
+    let currentUserEmail = localStorage.getItem('user_email') || null;
+    let searchQuery = '';
+    let currentSort = 'updated';
+    let currentTheme = localStorage.getItem('theme') || 'default';
 
     // Elements
+    const authView = document.getElementById('auth-view');
+    const appView = document.getElementById('app-view');
+    const authForm = document.getElementById('auth-form');
+    const authEmail = document.getElementById('auth-email');
+    const authPassword = document.getElementById('auth-password');
+    const authSubtitle = document.getElementById('auth-subtitle');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const authToggleLink = document.getElementById('auth-toggle-link');
+    const authToggleText = document.getElementById('auth-toggle-text');
+    const userEmailEl = document.getElementById('user-email');
+    const logoutBtn = document.getElementById('logout-btn');
+
     const skillsGrid = document.getElementById('skills-grid');
     const skillForm = document.getElementById('skill-form');
     const formTitle = document.getElementById('form-title');
     const submitBtn = document.getElementById('submit-btn');
     const cancelBtn = document.getElementById('cancel-btn');
     const emptyState = document.getElementById('empty-state');
+    
+    // Controls Elements
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const themeButtons = document.querySelectorAll('.theme-btn');
     
     // Form Inputs
     const skillIdInput = document.getElementById('skill-id');
@@ -31,6 +55,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Category Filters
     const filterChips = document.querySelectorAll('.filter-chip');
+
+    // Theme Manager
+    function applyTheme(themeName) {
+        currentTheme = themeName;
+        localStorage.setItem('theme', themeName);
+        document.body.removeAttribute('data-theme');
+        if (themeName !== 'default') {
+            document.body.setAttribute('data-theme', themeName);
+        }
+        themeButtons.forEach(btn => {
+            if (btn.getAttribute('data-theme-id') === themeName) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    // Initialize Theme
+    applyTheme(currentTheme);
+
+    themeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const selectedTheme = btn.getAttribute('data-theme-id');
+            applyTheme(selectedTheme);
+        });
+    });
+
+    // Search and Sort Logic
+    if (searchInput) {
+        searchInput.value = searchQuery;
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            renderSkills();
+        });
+    }
+
+    if (sortSelect) {
+        sortSelect.value = currentSort;
+        sortSelect.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            renderSkills();
+        });
+    }
 
     // Initialize Lucide Icons
     function updateIcons() {
@@ -89,10 +157,90 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Check if query parameter "registered=true" is present to show success toast
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('registered') === 'true') {
+        showToast('Registration successful! Please sign in.');
+        // Clean up URL parameter to avoid showing toast again on page reload
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Handle Authentication submission (Login only now, signup has its own page)
+    authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = authEmail.value.trim();
+        const password = authPassword.value;
+
+        try {
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Authentication failed');
+            }
+
+            token = data.access_token;
+            currentUserEmail = email;
+            localStorage.setItem('token', token);
+            localStorage.setItem('user_email', currentUserEmail);
+            showToast('Successfully logged in');
+            checkAuth();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+        token = null;
+        currentUserEmail = null;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_email');
+        showToast('Logged out successfully');
+        checkAuth();
+    });
+
+    // Check Auth State
+    function checkAuth() {
+        if (token) {
+            authView.style.display = 'none';
+            appView.style.display = 'block';
+            userEmailEl.textContent = currentUserEmail;
+            fetchSkills();
+        } else {
+            authView.style.display = 'flex';
+            appView.style.display = 'none';
+            skills = [];
+            renderSkills();
+        }
+        updateIcons();
+    }
+
+    // Helper for authorization headers
+    function getHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
     // Fetch and Display Skills
     async function fetchSkills() {
         try {
-            const response = await fetch(`${API_BASE}/skills`);
+            const response = await fetch(`${API_BASE}/skills`, {
+                headers: getHeaders()
+            });
+            if (response.status === 401) {
+                // Token expired or invalid
+                token = null;
+                localStorage.removeItem('token');
+                checkAuth();
+                return;
+            }
             if (!response.ok) throw new Error('Failed to load skills from server');
             skills = await response.json();
             renderSkills();
@@ -121,13 +269,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render skills items to DOM
     function renderSkills() {
-        // Clear previous list but preserve empty state
         const skillCards = skillsGrid.querySelectorAll('.skill-card');
         skillCards.forEach(card => card.remove());
 
-        const filtered = currentCategoryFilter === 'All' 
+        let filtered = currentCategoryFilter === 'All' 
             ? skills 
             : skills.filter(s => s.category === currentCategoryFilter);
+
+        // Search filter
+        if (searchQuery) {
+            filtered = filtered.filter(s => 
+                s.title.toLowerCase().includes(searchQuery) || 
+                (s.description && s.description.toLowerCase().includes(searchQuery))
+            );
+        }
+
+        // Sorting
+        filtered.sort((a, b) => {
+            if (currentSort === 'title') {
+                return a.title.localeCompare(b.title);
+            } else if (currentSort === 'progress-desc') {
+                return b.progress - a.progress;
+            } else if (currentSort === 'progress-asc') {
+                return a.progress - b.progress;
+            } else if (currentSort === 'level') {
+                const levels = { 'Beginner': 1, 'Intermediate': 2, 'Advanced': 3 };
+                return (levels[a.level] || 0) - (levels[b.level] || 0);
+            } else { // default: updated
+                return new Date(b.updated_at) - new Date(a.updated_at);
+            }
+        });
 
         if (filtered.length === 0) {
             emptyState.style.display = 'block';
@@ -140,6 +311,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('article');
             const statusClass = skill.status.toLowerCase().replace(' ', '-');
             card.className = `skill-card status-${statusClass}`;
+            
+            // Subtasks HTML construction
+            let subtasksHTML = '';
+            if (skill.subtasks && skill.subtasks.length > 0) {
+                const listItems = skill.subtasks.map(sub => `
+                    <div class="subtask-item ${sub.is_completed ? 'completed' : ''}">
+                        <div class="subtask-left" onclick="toggleSubtask(${sub.id}, ${!sub.is_completed})">
+                            <div class="subtask-checkbox">
+                                <i data-lucide="check" style="width: 10px; height: 10px;"></i>
+                            </div>
+                            <span class="subtask-text">${escapeHTML(sub.title)}</span>
+                        </div>
+                        <button class="subtask-delete-btn" onclick="deleteSubtask(${sub.id})" title="Delete milestone">
+                            <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+                        </button>
+                    </div>
+                `).join('');
+                
+                subtasksHTML = `
+                    <div class="subtasks-section">
+                        <div class="subtasks-title">
+                            <span>Milestones</span>
+                            <span>${skill.subtasks.filter(s => s.is_completed).length}/${skill.subtasks.length}</span>
+                        </div>
+                        <div class="subtasks-list">
+                            ${listItems}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const addSubtaskFormHTML = `
+                <div class="subtask-add-form-container" style="margin-top: 0.75rem;">
+                    <form class="subtask-add-form" onsubmit="handleAddSubtask(event, ${skill.id})">
+                        <input type="text" class="subtask-add-input" placeholder="Add milestone..." required>
+                        <button type="submit" class="subtask-add-btn" title="Add milestone">
+                            <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </form>
+                </div>
+            `;
+
             card.innerHTML = `
                 <div>
                     <div class="card-header">
@@ -148,10 +361,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <h3 class="skill-title">${escapeHTML(skill.title)}</h3>
                     <p class="skill-description">${escapeHTML(skill.description || 'No notes added yet.')}</p>
+                    
+                    ${subtasksHTML}
+                    ${addSubtaskFormHTML}
                 </div>
                 
                 <div>
-                    <div class="progress-container">
+                    <div class="progress-container" style="margin-top: 1.25rem;">
                         <div class="progress-header">
                             <span>${skill.status}</span>
                             <span>${skill.progress}%</span>
@@ -195,20 +411,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const id = skillIdInput.value;
                 const response = await fetch(`${API_BASE}/skills/${id}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getHeaders(),
                     body: JSON.stringify(skillData)
                 });
                 
+                if (response.status === 401) {
+                    token = null;
+                    localStorage.removeItem('token');
+                    checkAuth();
+                    return;
+                }
                 if (!response.ok) throw new Error('Failed to update skill');
                 showToast('Skill updated successfully');
                 resetForm();
             } else {
                 const response = await fetch(`${API_BASE}/skills`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getHeaders(),
                     body: JSON.stringify(skillData)
                 });
                 
+                if (response.status === 401) {
+                    token = null;
+                    localStorage.removeItem('token');
+                    checkAuth();
+                    return;
+                }
                 if (!response.ok) throw new Error('Failed to add skill');
                 showToast('Skill added successfully');
                 resetForm();
@@ -249,14 +477,94 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const response = await fetch(`${API_BASE}/skills/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: getHeaders()
             });
+            if (response.status === 401) {
+                token = null;
+                localStorage.removeItem('token');
+                checkAuth();
+                return;
+            }
             if (!response.ok) throw new Error('Failed to delete skill');
             showToast('Skill removed successfully');
             if (editMode && skillIdInput.value == id) {
                 resetForm();
             }
             fetchSkills();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    // Toggle Subtask Completion
+    window.toggleSubtask = async function(subtaskId, isCompleted) {
+        try {
+            const response = await fetch(`${API_BASE}/subtasks/${subtaskId}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ is_completed: isCompleted })
+            });
+            if (response.status === 401) {
+                token = null;
+                localStorage.removeItem('token');
+                checkAuth();
+                return;
+            }
+            if (!response.ok) throw new Error('Failed to update milestone');
+            
+            await fetchSkills();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    // Delete Subtask
+    window.deleteSubtask = async function(subtaskId) {
+        if (!confirm('Are you sure you want to remove this milestone?')) return;
+        try {
+            const response = await fetch(`${API_BASE}/subtasks/${subtaskId}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            if (response.status === 401) {
+                token = null;
+                localStorage.removeItem('token');
+                checkAuth();
+                return;
+            }
+            if (!response.ok) throw new Error('Failed to delete milestone');
+            
+            await fetchSkills();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    // Add Subtask Handler
+    window.handleAddSubtask = async function(event, skillId) {
+        event.preventDefault();
+        const form = event.target;
+        const input = form.querySelector('.subtask-add-input');
+        const title = input.value.trim();
+        if (!title) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/skills/${skillId}/subtasks`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ title })
+            });
+            if (response.status === 401) {
+                token = null;
+                localStorage.removeItem('token');
+                checkAuth();
+                return;
+            }
+            if (!response.ok) throw new Error('Failed to add milestone');
+            
+            input.value = '';
+            await fetchSkills();
         } catch (error) {
             showToast(error.message, 'error');
         }
@@ -288,6 +596,12 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/'/g, '&#039;');
     }
 
-    // Initial Fetch
-    fetchSkills();
-});
+    // Run initial authorization check
+    checkAuth();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}

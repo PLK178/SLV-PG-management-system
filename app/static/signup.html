@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillCraft | Join Us</title>
+    <meta name="description" content="Create your SkillCraft account to start tracking, managing, and mastering your skills.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div id="auth-view" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>SkillCraft</h2>
+                <p id="auth-subtitle">Create an account to start tracking skills</p>
+            </div>
+            
+            <form id="signup-form">
+                <div class="form-group">
+                    <label for="auth-email">Email Address</label>
+                    <input type="email" id="auth-email" class="form-control" placeholder="you@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="auth-password">Password</label>
+                    <input type="password" id="auth-password" class="form-control" placeholder="••••••••" required minlength="6">
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; display: block;">Must be at least 6 characters</span>
+                </div>
+                
+                <button type="submit" id="auth-submit-btn" class="btn" style="width: 100%; margin-top: 1.5rem; justify-content: center;">
+                    <i data-lucide="user-plus"></i>
+                    <span>Sign Up</span>
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p id="auth-toggle-text">Already have an account? <a href="index.html" id="auth-toggle-link">Sign In</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications toast system -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="signup.js"></script>
+</body>
+</html>
