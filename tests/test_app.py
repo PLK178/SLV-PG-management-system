@@ -144,6 +144,41 @@ def test_auth_and_skills_flow():
     assert update_response.json()["progress"] == 90
     assert update_response.json()["status"] == "Mastered"
 
+    # 9a. Subtask Lifecycle: Create a subtask
+    sub1_res = client.post(f"/api/skills/{skill_id}/subtasks", json={"title": "Setup repository"}, headers=headers)
+    assert sub1_res.status_code == 201
+    sub1_id = sub1_res.json()["id"]
+    assert sub1_res.json()["is_completed"] is False
+
+    # Create a second subtask
+    sub2_res = client.post(f"/api/skills/{skill_id}/subtasks", json={"title": "Write unit tests"}, headers=headers)
+    assert sub2_res.status_code == 201
+    sub2_id = sub2_res.json()["id"]
+
+    # Since we added subtasks, the skill's progress should be auto-recalculated (0 of 2 completed = 0%)
+    get_skill_res = client.get(f"/api/skills/{skill_id}", headers=headers)
+    assert get_skill_res.json()["progress"] == 0
+    assert get_skill_res.json()["status"] == "Not Started"
+
+    # Update first subtask to completed
+    sub1_update = client.put(f"/api/subtasks/{sub1_id}", json={"is_completed": True}, headers=headers)
+    assert sub1_update.status_code == 200
+    assert sub1_update.json()["is_completed"] is True
+
+    # Progress should now be 50% (1 of 2 completed)
+    get_skill_res = client.get(f"/api/skills/{skill_id}", headers=headers)
+    assert get_skill_res.json()["progress"] == 50
+    assert get_skill_res.json()["status"] == "In Progress"
+
+    # Delete the second subtask
+    sub2_del = client.delete(f"/api/subtasks/{sub2_id}", headers=headers)
+    assert sub2_del.status_code == 200
+
+    # Progress should now be 100% (1 of 1 completed)
+    get_skill_res = client.get(f"/api/skills/{skill_id}", headers=headers)
+    assert get_skill_res.json()["progress"] == 100
+    assert get_skill_res.json()["status"] == "Mastered"
+
     # 10. Delete the skill
     delete_response = client.delete(f"/api/skills/{skill_id}", headers=headers)
     assert delete_response.status_code == 200
@@ -151,3 +186,4 @@ def test_auth_and_skills_flow():
     # 11. Get deleted skill (should return 404)
     get_deleted_response = client.get(f"/api/skills/{skill_id}", headers=headers)
     assert get_deleted_response.status_code == 404
+
