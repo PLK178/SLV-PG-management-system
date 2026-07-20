@@ -16,32 +16,60 @@ export default function Dashboard({ onLogout }) {
   const [outings, setOutings] = useState([]);
 
   useEffect(() => {
-    setRooms(api.getRooms());
-    setTenants(api.getTenants());
-    setPayments(api.getPayments());
-    setComplaints(api.getComplaints());
-    setOutings(api.getOutings());
+    const loadData = async () => {
+      try {
+        const roomsData = await api.getRooms();
+        setRooms(roomsData);
+        const tenantsData = await api.getTenants();
+        setTenants(tenantsData);
+        const paymentsData = await api.getPayments();
+        setPayments(paymentsData);
+        const complaintsData = await api.getComplaints();
+        setComplaints(complaintsData);
+        const outingsData = await api.getOutings();
+        setOutings(outingsData);
+      } catch (err) {
+        console.error("Failed to load dashboard data from backend", err);
+      }
+    };
+    loadData();
   }, [activeTab]); // reload data when active tab changes
 
   // Save updates helper
-  const updateRooms = (newRooms) => {
+  const updateRooms = async (newRooms) => {
     setRooms(newRooms);
-    api.saveRooms(newRooms);
+    try {
+      await api.saveRooms(newRooms);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const updateTenants = (newTenants) => {
+  const updateTenants = async (newTenants) => {
     setTenants(newTenants);
-    api.saveTenants(newTenants);
+    try {
+      await api.saveTenants(newTenants);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const updateComplaints = (newComplaints) => {
+  const updateComplaints = async (newComplaints) => {
     setComplaints(newComplaints);
-    api.saveComplaints(newComplaints);
+    try {
+      await api.saveComplaints(newComplaints);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const updateOutings = (newOutings) => {
+  const updateOutings = async (newOutings) => {
     setOutings(newOutings);
-    api.saveOutings(newOutings);
+    try {
+      await api.saveOutings(newOutings);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Modal control states
@@ -101,10 +129,10 @@ export default function Dashboard({ onLogout }) {
   const handleOpenTenantModal = (tenant = null) => {
     if (tenant) {
       setEditingTenant(tenant);
-      setTenantForm({ ...tenant });
+      setTenantForm({ ...tenant, password: '' });
     } else {
       setEditingTenant(null);
-      setTenantForm({ name: '', email: '', phone: '', room: rooms[0]?.number || '', joinDate: new Date().toISOString().split('T')[0], paymentStatus: 'Paid' });
+      setTenantForm({ name: '', email: '', phone: '', room: rooms[0]?.number || '', joinDate: new Date().toISOString().split('T')[0], paymentStatus: 'Paid', password: '' });
     }
     setTenantModalOpen(true);
   };
@@ -713,6 +741,17 @@ export default function Dashboard({ onLogout }) {
                 value={tenantForm.joinDate} 
                 onChange={(e) => setTenantForm({ ...tenantForm, joinDate: e.target.value })}
                 required 
+              />
+            </div>
+
+            <div style={styles.modalFormGroup}>
+              <label style={styles.modalLabel}>Password</label>
+              <input 
+                type="password" 
+                className="input-field" 
+                placeholder={editingTenant ? "Leave blank to keep existing password" : "e.g. tenant123 (defaults to tenant123)"}
+                value={tenantForm.password || ''} 
+                onChange={(e) => setTenantForm({ ...tenantForm, password: e.target.value })}
               />
             </div>
 
