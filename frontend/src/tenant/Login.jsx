@@ -8,23 +8,19 @@ export default function TenantLogin({ onLogin }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      const tenants = api.getTenants();
-      const match = tenants.find(t => t.email.toLowerCase() === email.toLowerCase());
-
-      if (match && password === 'tenant123') {
-        setIsLoading(false);
-        onLogin(match);
-      } else {
-        setIsLoading(false);
-        setError('Invalid Email or Password. Default password is tenant123. Hint: Try alice@example.com / tenant123');
-      }
-    }, 800);
+    try {
+      const tenantData = await api.tenantLogin(email, password);
+      setIsLoading(false);
+      onLogin(tenantData);
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Invalid Email or Password. Hint: Try alice@example.com / tenant123');
+    }
   };
 
   return (
@@ -93,7 +89,7 @@ export default function TenantLogin({ onLogin }) {
         </form>
 
         <div style={styles.footer}>
-          <span style={styles.footerText}>Registered demo emails: <strong>alice@example.com</strong> / <strong>tenant123</strong></span>
+          <span style={styles.footerText}>Registered demo emails: <strong>tenant</strong> / <strong>tenant</strong></span>
         </div>
       </div>
     </div>
