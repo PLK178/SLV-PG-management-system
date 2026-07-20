@@ -26,22 +26,29 @@ export default function TenantDashboard({ tenant, onLogout }) {
 
   useEffect(() => {
     // Load fresh data
-    const rooms = api.getRooms();
-    const matchRoom = rooms.find(r => r.number === tenantInfo.room);
-    setRoomDetails(matchRoom || { number: tenantInfo.room, type: 'Standard Sharing', rent: 6000, floor: 'Ground', status: 'Occupied' });
+    const loadFreshData = async () => {
+      try {
+        const rooms = await api.getRooms();
+        const matchRoom = rooms.find(r => r.number === tenantInfo.room);
+        setRoomDetails(matchRoom || { number: tenantInfo.room, type: 'Standard Sharing', rent: 6000, floor: 'Ground', status: 'Occupied' });
 
-    const allComplaints = api.getComplaints();
-    setComplaints(allComplaints.filter(c => c.tenant === tenantInfo.name));
+        const allComplaints = await api.getComplaints();
+        setComplaints(allComplaints.filter(c => c.tenant === tenantInfo.name));
 
-    const allPayments = api.getPayments();
-    setPayments(allPayments.filter(p => p.tenant === tenantInfo.name));
+        const allPayments = await api.getPayments();
+        setPayments(allPayments.filter(p => p.tenant === tenantInfo.name));
 
-    const allOutings = api.getOutings();
-    setOutings(allOutings.filter(o => o.tenant === tenantInfo.name));
+        const allOutings = await api.getOutings();
+        setOutings(allOutings.filter(o => o.tenant === tenantInfo.name));
+      } catch (err) {
+        console.error("Failed to load tenant dashboard data from backend", err);
+      }
+    };
+    loadFreshData();
   }, [tenantInfo]);
 
   // Submit Outing Timing request
-  const handleRegisterOuting = (e) => {
+  const handleRegisterOuting = async (e) => {
     e.preventDefault();
     if (!departureTime || !expectedReturn || !outingPurpose.trim()) return;
 
@@ -56,17 +63,23 @@ export default function TenantDashboard({ tenant, onLogout }) {
       status: 'Out'
     };
 
-    const updatedOutings = [newOuting, ...api.getOutings()];
-    api.saveOutings(updatedOutings);
-    setOutings(updatedOutings.filter(o => o.tenant === tenantInfo.name));
-    setOutingPurpose('');
-    setDepartureTime('');
-    setExpectedReturn('');
-    alert('Outing timing registered successfully!');
+    try {
+      const currentOutings = await api.getOutings();
+      const updatedOutings = [newOuting, ...currentOutings];
+      await api.saveOutings(updatedOutings);
+      setOutings(updatedOutings.filter(o => o.tenant === tenantInfo.name));
+      setOutingPurpose('');
+      setDepartureTime('');
+      setExpectedReturn('');
+      alert('Outing timing registered successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to register outing. Please try again.');
+    }
   };
 
   // Submit Complaint ticket
-  const handleAddComplaint = (e) => {
+  const handleAddComplaint = async (e) => {
     e.preventDefault();
     if (!newComplaint.trim()) return;
 
@@ -79,18 +92,24 @@ export default function TenantDashboard({ tenant, onLogout }) {
       status: 'Pending'
     };
 
-    const updatedComplaints = [newTicket, ...api.getComplaints()];
-    api.saveComplaints(updatedComplaints);
-    setComplaints(updatedComplaints.filter(c => c.tenant === tenantInfo.name));
-    setNewComplaint('');
-    alert('Complaint registered successfully! The warden will inspect shortly.');
+    try {
+      const currentComplaints = await api.getComplaints();
+      const updatedComplaints = [newTicket, ...currentComplaints];
+      await api.saveComplaints(updatedComplaints);
+      setComplaints(updatedComplaints.filter(c => c.tenant === tenantInfo.name));
+      setNewComplaint('');
+      alert('Complaint registered successfully! The warden will inspect shortly.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to register complaint. Please try again.');
+    }
   };
 
   // Mock Pay Rent transaction
   const handlePayRent = () => {
     setPaying(true);
     
-    setTimeout(() => {
+    setTimeout(async () => {
       // Create transaction receipt
       const newReceipt = {
         id: Date.now(),
@@ -101,21 +120,28 @@ export default function TenantDashboard({ tenant, onLogout }) {
         status: 'Success'
       };
 
-      const updatedPayments = [newReceipt, ...api.getPayments()];
-      api.savePayments(updatedPayments);
+      try {
+        const currentPayments = await api.getPayments();
+        const updatedPayments = [newReceipt, ...currentPayments];
+        await api.savePayments(updatedPayments);
 
-      // Update tenant status to Paid in DB
-      const allTenants = api.getTenants();
-      const updatedTenants = allTenants.map(t => t.id === tenantInfo.id ? { ...t, paymentStatus: 'Paid' } : t);
-      api.saveTenants(updatedTenants);
+        // Update tenant status to Paid in DB
+        const allTenants = await api.getTenants();
+        const updatedTenants = allTenants.map(t => t.id === tenantInfo.id ? { ...t, paymentStatus: 'Paid' } : t);
+        await api.saveTenants(updatedTenants);
 
-      // Update local state
-      setPayments(updatedPayments.filter(p => p.tenant === tenantInfo.name));
-      setTenantInfo({ ...tenantInfo, paymentStatus: 'Paid' });
-      setPaying(false);
-      setPaymentSuccess(true);
-      
-      setTimeout(() => setPaymentSuccess(false), 3000);
+        // Update local state
+        setPayments(updatedPayments.filter(p => p.tenant === tenantInfo.name));
+        setTenantInfo({ ...tenantInfo, paymentStatus: 'Paid' });
+        setPaying(false);
+        setPaymentSuccess(true);
+        
+        setTimeout(() => setPaymentSuccess(false), 3000);
+      } catch (err) {
+        console.error(err);
+        setPaying(false);
+        alert('Failed to process rent payment. Please try again.');
+      }
     }, 1500);
   };
 
