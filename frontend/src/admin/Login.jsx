@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Mail, ArrowRight, Shield, AlertCircle } from 'lucide-react';
+import { api } from '../services/api';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -7,21 +8,19 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Mock API delay
-    setTimeout(() => {
-      if (email === 'admin@pg.com' && password === 'admin123') {
-        setIsLoading(false);
-        onLogin(true);
-      } else {
-        setIsLoading(false);
-        setError('Invalid email or password. Hint: admin@pg.com / admin123');
-      }
-    }, 800);
+    try {
+      const adminData = await api.adminLogin(email, password);
+      setIsLoading(false);
+      onLogin(adminData);
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Invalid username or password. Hint: admin / admin');
+    }
   };
 
   return (
@@ -47,13 +46,13 @@ export default function Login({ onLogin }) {
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Admin Email</label>
+            <label style={styles.label}>Admin Username</label>
             <div style={styles.inputWrapper}>
               <Mail size={18} style={styles.inputIcon} />
               <input
-                type="email"
+                type="text"
                 className="input-field"
-                placeholder="admin@pg.com"
+                placeholder="admin"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -90,7 +89,7 @@ export default function Login({ onLogin }) {
         </form>
 
         <div style={styles.footer}>
-          <span style={styles.footerText}>Demo Access: <strong>admin@pg.com</strong> / <strong>admin123</strong></span>
+          <span style={styles.footerText}>Demo Access: <strong>admin</strong> / <strong>admin</strong></span>
         </div>
       </div>
     </div>
