@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from ..utils.security import hash_password
 
 DB_FILE = "pg_management.db"
 
@@ -90,10 +91,10 @@ def init_db():
     # Check if admins exists
     cursor.execute("SELECT COUNT(*) FROM admins")
     if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO admins (email, password) VALUES (?, ?)", ("admin", "admin"))
+        cursor.execute("INSERT INTO admins (email, password) VALUES (?, ?)", ("admin", hash_password("admin")))
     else:
         # Also ensure "admin" exists in the database
-        cursor.execute("INSERT OR REPLACE INTO admins (email, password) VALUES (?, ?)", ("admin", "admin"))
+        cursor.execute("INSERT OR REPLACE INTO admins (email, password) VALUES (?, ?)", ("admin", hash_password("admin")))
         
     # Check if rooms exists
     cursor.execute("SELECT COUNT(*) FROM rooms")
@@ -111,9 +112,9 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM tenants")
     if cursor.fetchone()[0] == 0:
         tenants = [
-            (1, 'Alice Smith', 'alice@example.com', '+91 9876543210', '101', '2026-01-10', 'Paid', 'tenant123'),
-            (2, 'Bob Johnson', 'bob@example.com', '+91 8765432109', '201', '2026-03-15', 'Pending', 'tenant123'),
-            (3, 'Charlie Davis', 'charlie@example.com', '+91 7654321098', '301', '2026-05-01', 'Paid', 'tenant123')
+            (1, 'Alice Smith', 'alice@example.com', '+91 9876543210', '101', '2026-01-10', 'Paid', hash_password('tenant123')),
+            (2, 'Bob Johnson', 'bob@example.com', '+91 8765432109', '201', '2026-03-15', 'Pending', hash_password('tenant123')),
+            (3, 'Charlie Davis', 'charlie@example.com', '+91 7654321098', '301', '2026-05-01', 'Paid', hash_password('tenant123'))
         ]
         cursor.executemany("INSERT OR REPLACE INTO tenants (id, name, email, phone, room, joinDate, paymentStatus, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", tenants)
         
@@ -144,6 +145,19 @@ def init_db():
             (2, 'Bob Johnson', '201', '2026-07-20T14:30', '2026-07-20T21:30', None, 'Dinner with friends', 'Out')
         ]
         cursor.executemany("INSERT OR REPLACE INTO outings (id, tenant, room, departureTime, expectedReturnTime, actualReturnTime, purpose, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", outings)
+
+    # Migrate existing passwords in database to bcrypt if they are plain text
+    cursor.execute("SELECT email, password FROM admins")
+    for row in cursor.fetchall():
+        pwd = row["password"]
+        if not (pwd.startswith("$2b$") or pwd.startswith("$2a$")):
+            cursor.execute("UPDATE admins SET password = ? WHERE email = ?", (hash_password(pwd), row["email"]))
+
+    cursor.execute("SELECT id, password FROM tenants")
+    for row in cursor.fetchall():
+        pwd = row["password"]
+        if not (pwd.startswith("$2b$") or pwd.startswith("$2a$")):
+            cursor.execute("UPDATE tenants SET password = ? WHERE id = ?", (hash_password(pwd), row["id"]))
         
     conn.commit()
     conn.close()
