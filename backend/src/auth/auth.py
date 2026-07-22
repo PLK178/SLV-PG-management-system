@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from ..db.database import get_db_connection
 from ..db.schemas import AdminLoginRequest, TenantLoginRequest
+from ..utils.security import verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -8,11 +9,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 def admin_login(payload: AdminLoginRequest):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM admins WHERE email = ? AND password = ?", (payload.email.lower(), payload.password))
+    cursor.execute("SELECT * FROM admins WHERE email = ?", (payload.email.lower(),))
     admin = cursor.fetchone()
     conn.close()
     
-    if not admin:
+    if not admin or not verify_password(payload.password, admin["password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid admin email or password"
@@ -23,11 +24,11 @@ def admin_login(payload: AdminLoginRequest):
 def tenant_login(payload: TenantLoginRequest):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tenants WHERE LOWER(email) = ? AND password = ?", (payload.email.lower(), payload.password))
+    cursor.execute("SELECT * FROM tenants WHERE LOWER(email) = ?", (payload.email.lower(),))
     tenant = cursor.fetchone()
     conn.close()
     
-    if not tenant:
+    if not tenant or not verify_password(payload.password, tenant["password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid tenant email or password"
