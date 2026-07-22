@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 from ..db.database import get_db_connection
 from ..db.schemas import TenantSchema
+from ..utils.security import hash_password
 
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
@@ -29,6 +30,11 @@ def save_tenants(tenants: List[TenantSchema]):
             email_lower = tenant.email.lower()
             # Respect the custom password if provided, otherwise fallback to existing password or default "tenant123"
             password = tenant.password if (tenant.password and tenant.password.strip()) else (password_map.get(email_lower) or "tenant123")
+            
+            # Hash the password if it's not already a bcrypt hash
+            if not (password.startswith("$2b$") or password.startswith("$2a$")):
+                password = hash_password(password)
+                
             cursor.execute(
                 "INSERT INTO tenants (id, name, email, phone, room, joinDate, paymentStatus, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (tenant.id, tenant.name, tenant.email, tenant.phone, tenant.room, tenant.joinDate, tenant.paymentStatus, password)
