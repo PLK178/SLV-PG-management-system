@@ -1,5 +1,6 @@
 /myvenv
 /node_modules
+frontend/dist
 .vscode
 /*.pyc
 __pycache__

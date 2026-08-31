@@ -9,7 +9,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 def admin_login(payload: AdminLoginRequest):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM admins WHERE email = ?", (payload.email.lower(),))
+    cursor.execute("SELECT * FROM admins WHERE email = %s", (payload.email.lower(),))
     admin = cursor.fetchone()
     conn.close()
     
@@ -24,7 +24,7 @@ def admin_login(payload: AdminLoginRequest):
 def tenant_login(payload: TenantLoginRequest):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tenants WHERE LOWER(email) = ?", (payload.email.lower(),))
+    cursor.execute("SELECT * FROM tenants WHERE LOWER(email) = %s", (payload.email.lower(),))
     tenant = cursor.fetchone()
     conn.close()
     

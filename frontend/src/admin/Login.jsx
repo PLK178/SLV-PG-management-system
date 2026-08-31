@@ -46,13 +46,13 @@ export default function Login({ onLogin }) {
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Admin Username</label>
+            <label style={styles.label}>Admin Email</label>
             <div style={styles.inputWrapper}>
               <Mail size={18} style={styles.inputIcon} />
               <input
-                type="text"
+                type="email"
                 className="input-field"
-                placeholder="admin"
+                placeholder="admin@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -89,7 +89,7 @@ export default function Login({ onLogin }) {
         </form>
 
         <div style={styles.footer}>
-          <span style={styles.footerText}>Demo Access: <strong>admin</strong> / <strong>admin</strong></span>
+          <span style={styles.footerText}>Demo Access: <strong>admin@gmail.com</strong> / <strong>admin</strong></span>
         </div>
       </div>
     </div>
